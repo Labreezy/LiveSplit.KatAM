@@ -1,4 +1,6 @@
 
+use core::default;
+
 use asr::settings::Gui;
 use asr::settings::gui::Title;
 
@@ -20,6 +22,12 @@ pub struct Settings {
 
     /// Rainbow -> Moonlit Warp Star
     #[default = false]
-    pub rr_mm_warp: bool
+    pub rr_mm_warp: bool,
+
+    ///Collectibles
+    _collectibles: Title,
+    ///Split On Any Spray Collection
+    #[default=false]
+    pub spray_collect: bool,
     
 }

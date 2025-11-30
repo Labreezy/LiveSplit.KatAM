@@ -1,15 +1,9 @@
 
 
 use asr::{
-    watcher::{Pair, Watcher},
-    Address,
-};
+    watcher::{Watcher},
 
-macro_rules! define_address {
-    ($name:ident, $addr:expr) => {
-        pub const $name: Address = Address::new($addr);
-    };
-}
+};
 
 
 
@@ -21,14 +15,18 @@ pub struct LocationPair {
     pub new_room: u16,
 }
 
-define_address!(CURR_ROOM_ADDR,0x2020FE6);
-define_address!(SHARD_FLAG_ADDR,0x2038970);
-define_address!(CHEST_START_ADDR,0x2038960);
+pub const CURR_ROOM_ADDR : u32 = 0x2020FE6;
+pub const SHARD_FLAG_ADDR : u32 = 0x2038970;
+pub const DM6_HP_ADDR : u32 = 0x2000088;
+pub const SPRAY_FLAG_ADDR : u32 = 0x2038974;
+
+pub static SPRAY_NAMES : [&str; 14] = [&"Pink",&"Yellow",&"Red",&"Green",&"Snow",&"Carbon",&"Ocean",&"Sapphire",&"Grape",&"Emerald",&"Orange",&"Chocolate",&"Cherry",&"Chalk"];
+
 
 #[derive(Default)]
 pub struct GameState {
     pub shards: Watcher<u8>,
-    pub chests: Watcher<[u8; 11]>,
+    pub sprays: Watcher<[u8;2]>,
     pub room: Watcher<u16>,
     pub dm6_hp: Watcher<u8>
 }
