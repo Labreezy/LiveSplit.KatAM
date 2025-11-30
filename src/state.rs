@@ -30,4 +30,5 @@ pub struct GameState {
     pub shards: Watcher<u8>,
     pub chests: Watcher<[u8; 11]>,
     pub room: Watcher<u16>,
+    pub dm6_hp: Watcher<u8>
 }
