@@ -51,6 +51,7 @@ async fn main() {
                     if timer_state == TimerState::Running {
                         if previous_timer_state == TimerState::NotRunning {
                             vars.has_golem_split = false;  
+                            print_message("start");
                             start(&mut state, &mut vars, &settings);
 
                         }
@@ -88,7 +89,7 @@ pub fn startup() -> CustomVars {
         spray_split_mask: core::array::from_fn(|_| false),
         has_golem_split: false,
         dmk_final_loc: LocationPair { enabled: true, has_split: false, old_room: 909, new_room: 910 },
-        dm4_loc: LocationPair{
+        dm4_loc: LocationPair {
             enabled: true,
             has_split: false,
             old_room: 916,
@@ -125,6 +126,19 @@ fn split(state: &mut GameState, vars: &mut CustomVars, settings: &Settings) -> b
     let shard_pair = state.shards.pair.unwrap_or_default();
     let spray_pair = state.sprays.pair.unwrap_or_default();
 
+    
+    //Mirror Shard Collection
+    if shard_pair.increased() {
+
+        let num_old_flags: usize = vars.shard_split_mask.iter().filter(|&b| *b).count();
+        let num_current_flags = (0..8).filter(|i: &i32| shard_pair.current & (1 << i) > 0).count();
+        print_limited::<64>(&format_args!("{} -> {}", num_old_flags, num_current_flags));
+        if num_current_flags - num_old_flags == 1 {
+            vars.shard_split_mask = core::array::from_fn(|i| shard_pair.current & (1 << i) > 0);
+            return true;
+        }
+        
+    }
 
     macro_rules! split_loc_pair {
         ($name:ident) => {
@@ -157,15 +171,15 @@ fn split(state: &mut GameState, vars: &mut CustomVars, settings: &Settings) -> b
     if settings.spray_collect && spray_pair.bytes_changed() {
         if spray_pair.current[0] >= spray_pair.old[0] && spray_pair.current[1] >= spray_pair.old[1] {
             let num_old_flags = vars.spray_split_mask.iter().filter(|&b| *b).count();
-            let mut num_new_flags = (0..8).filter(|i| spray_pair.current[0] & (1 << i) == 0).count();
-            num_new_flags += (0..6).filter(|i| spray_pair.current[1] & (1 << i) == 0).count();
+            let mut num_new_flags = (0..8).filter(|i| spray_pair.current[0] & (1 << i) > 0).count();
+            num_new_flags += (0..6).filter(|i| spray_pair.current[1] & (1 << i) > 0).count();
 
             if num_new_flags - num_old_flags == 1 {
                 for i in 0..8 {
-                    vars.spray_split_mask[i] = (spray_pair[0] & 1 << i) == 0;
+                    vars.spray_split_mask[i] = (spray_pair[0] & 1 << i) > 0;
                 }
                 for i in 8..14 {
-                    vars.spray_split_mask[i] = (spray_pair[1] & 1 << (i-8)) == 0;
+                    vars.spray_split_mask[i] = (spray_pair[1] & 1 << (i-8)) > 0;
                 }
                 print_message("COLLECTED SPRAY");
                 return true;
@@ -173,18 +187,5 @@ fn split(state: &mut GameState, vars: &mut CustomVars, settings: &Settings) -> b
         }
         
     }
-
-    //Mirror Shard Collection
-    if shard_pair.increased() {
-
-        let num_old_flags: usize = vars.shard_split_mask.iter().filter(|&b| *b).count();
-        let num_current_flags = (0..8).filter(|i| shard_pair.current & (1 << i) == 0).count();
-        if num_current_flags - num_old_flags == 1 {
-            vars.shard_split_mask = core::array::from_fn(|i| shard_pair.current & (1 << i) == 0);
-            return true;
-        }
-        
-    }
-
     return false;
 }
