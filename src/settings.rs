@@ -29,5 +29,39 @@ pub struct Settings {
     ///Split On Any Spray Collection
     #[default=false]
     pub spray_collect: bool,
+
+    ///Switches
+    _switches: Title,
+
+    #[default=false]
+    pub moonlight_mansion_switch: bool,
+    #[default=false]
+    pub rainbow_route_switch: bool,
+    #[default=false]
+    pub olive_ocean_switch: bool,
+    #[default=false]
+    pub deep_olive_ocean_switch: bool,
+    #[default=false]
+    pub deep_cabbage_cavern_switch: bool,
+    #[default=false]
+    pub cabbage_cavern_switch: bool,
+    #[default=false]
+    pub radish_ruins_switch: bool,
+    #[default=false]
+    pub deep_radish_ruins_switch: bool,
+    #[default=false]
+    pub carrot_castle_switch: bool,
+    #[default=false]
+    pub deep_carrot_castle_switch: bool,
+    #[default=false]
+    pub peppermint_palace_switch: bool,
+    #[default=false]
+    pub deep_peppermint_palace_switch: bool,
+    #[default=false]
+    pub mustard_mountain_switch: bool,
+    #[default=false]
+    pub candy_constellation_switch: bool,
+    #[default=false]
+    pub deep_mustard_mountain_switch: bool, 
     
 }

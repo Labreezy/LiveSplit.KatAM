@@ -9,7 +9,7 @@ use asr::{Process, emulator::gba::Emulator, future::next_tick, print_limited, pr
 use state::{LocationPair, GameState};
 use settings::Settings;
 
-use crate::state::{CURR_ROOM_ADDR, DM6_HP_ADDR, SHARD_FLAG_ADDR, SPRAY_FLAG_ADDR};
+use crate::state::{CURR_ROOM_ADDR, DM6_HP_ADDR, SHARD_FLAG_ADDR, SPRAY_FLAG_ADDR, SWITCH_STATE_ARR_ADDR};
 asr::async_main!(stable);
 asr::panic_handler!();
 
@@ -17,6 +17,8 @@ asr::panic_handler!();
 pub struct CustomVars {
     shard_split_mask: [bool; 8],
     spray_split_mask: [bool; 14],
+    switch_split_mask: [bool; 15],
+    has_switch_split: [bool; 15],
     has_golem_split: bool,
     dm6_has_split: bool,
     dmk_final_loc: LocationPair,
@@ -31,9 +33,6 @@ pub struct CustomVars {
 
 
 async fn main() {
-    // TODO: Set up some general state and settings.
-    //let mut settings = Settings::register();
-
     asr::print_message("Starting KATAM Autosplitter");
     let mut settings = settings::Settings::register();
     loop {
@@ -68,10 +67,14 @@ async fn main() {
 }
 
 
+
+
 pub fn start( state: &mut GameState, vars: &mut CustomVars, settings: &Settings) {
     vars.has_golem_split = false;
     vars.shard_split_mask = core::array::from_fn(|_| false);
     vars.spray_split_mask = core::array::from_fn(|_| false);
+    vars.switch_split_mask = core::array::from_fn(|_| false);
+    vars.has_switch_split = core::array::from_fn(|_| false);
     vars.dmk_final_loc.enabled = settings.dark_mk;
     vars.dm4_loc.enabled = settings.dm4_dm5;
     vars.rr_warpstar_loc.enabled = settings.rr_mm_warp;
@@ -80,6 +83,29 @@ pub fn start( state: &mut GameState, vars: &mut CustomVars, settings: &Settings)
     vars.rr_warpstar_loc.has_split = false;
     vars.dm6_has_split = false;
 
+    macro_rules! set_switch_mask_if_setting {
+        ( $setting:ident, $number:expr ) => {
+            if settings.$setting {
+                vars.switch_split_mask[$number] = true
+            }
+        };
+    }
+
+    set_switch_mask_if_setting!(moonlight_mansion_switch, 0);
+    set_switch_mask_if_setting!(rainbow_route_switch, 1);
+    set_switch_mask_if_setting!(olive_ocean_switch, 2);
+    set_switch_mask_if_setting!(deep_olive_ocean_switch, 3);
+    set_switch_mask_if_setting!(deep_cabbage_cavern_switch, 4);
+    set_switch_mask_if_setting!(cabbage_cavern_switch, 5);
+    set_switch_mask_if_setting!(radish_ruins_switch, 6);
+    set_switch_mask_if_setting!(deep_radish_ruins_switch, 7);
+    set_switch_mask_if_setting!(carrot_castle_switch, 8);
+    set_switch_mask_if_setting!(deep_carrot_castle_switch, 9);
+    set_switch_mask_if_setting!(peppermint_palace_switch, 10);
+    set_switch_mask_if_setting!(deep_peppermint_palace_switch, 11);
+    set_switch_mask_if_setting!(mustard_mountain_switch, 12);
+    set_switch_mask_if_setting!(candy_constellation_switch, 13);
+    set_switch_mask_if_setting!(deep_mustard_mountain_switch, 14);
 }
 
 pub fn startup() -> CustomVars {
@@ -87,6 +113,8 @@ pub fn startup() -> CustomVars {
     CustomVars {
         shard_split_mask: core::array::from_fn(|_| false),
         spray_split_mask: core::array::from_fn(|_| false),
+        switch_split_mask: core::array::from_fn(|_| false),
+        has_switch_split: core::array::from_fn(|_| false),
         has_golem_split: false,
         dmk_final_loc: LocationPair { enabled: true, has_split: false, old_room: 909, new_room: 910 },
         dm4_loc: LocationPair {
@@ -101,7 +129,8 @@ pub fn startup() -> CustomVars {
             old_room: 142,
             new_room: 195,
         },
-        dm6_has_split: false
+        dm6_has_split: false,
+
     }
 }
 
@@ -111,10 +140,13 @@ fn update_loop(game: &Emulator, state: &mut GameState, settings: &Settings){
     let curr_shards = game.read::<u8>(SHARD_FLAG_ADDR).unwrap_or_default();
     let dm6_hp = game.read::<u8>(DM6_HP_ADDR).unwrap_or_default();
     let spray_bytes = game.read::<[u8;2]>(SPRAY_FLAG_ADDR).unwrap_or_default();
+    let switch_states = game.read::<[u32;15]>(SWITCH_STATE_ARR_ADDR).unwrap_or_default();
+
     state.room.update_infallible(curr_room);
     state.shards.update_infallible(curr_shards);
     state.dm6_hp.update_infallible(dm6_hp);
     state.sprays.update_infallible(spray_bytes);
+    state.switches.update_infallible(switch_states);
 }
 
 
@@ -125,7 +157,7 @@ fn split(state: &mut GameState, vars: &mut CustomVars, settings: &Settings) -> b
     let room_pair = state.room.pair.unwrap_or_default();
     let shard_pair = state.shards.pair.unwrap_or_default();
     let spray_pair = state.sprays.pair.unwrap_or_default();
-
+    let switch_pair = state.switches.pair.unwrap_or_default();
     
     //Mirror Shard Collection
     if shard_pair.increased() {
@@ -187,5 +219,27 @@ fn split(state: &mut GameState, vars: &mut CustomVars, settings: &Settings) -> b
         }
         
     }
+
+    //Switches
+    let switches_on = vars.switch_split_mask.iter().filter(|&b| *b).count() > 0;
+    if switches_on && switch_pair.bytes_changed() {
+        let old_n_switches = vars.has_switch_split.iter().filter(|&b| *b).count();
+        let new_n_switches = switch_pair.current.iter().filter(|&v| *v == 1).count();
+        print_limited::<64>(&format_args!("{} -> {} switches", old_n_switches, new_n_switches));
+        if new_n_switches > old_n_switches && new_n_switches  - old_n_switches == 1 {
+            for i in 0..15 {
+                
+                if !vars.has_switch_split[i] && switch_pair.current[i] > 0 {
+                    vars.has_switch_split[i] = true;
+                    print_limited::<64>(&format_args!("SWITCH {} HIT ({})", i, switch_pair.current[i]));
+                    if vars.switch_split_mask[i] {
+                        return true;
+                    }
+                }
+                
+            }
+        }
+    }
+    
     return false;
 }
