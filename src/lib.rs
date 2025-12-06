@@ -9,7 +9,7 @@ use asr::{Process, emulator::gba::Emulator, future::next_tick, print_limited, pr
 use state::{LocationPair, GameState};
 use settings::Settings;
 
-use crate::state::{CURR_ROOM_ADDR, DM6_HP_ADDR, SHARD_FLAG_ADDR, SPRAY_FLAG_ADDR, SWITCH_STATE_ARR_ADDR};
+use crate::state::{CURR_ROOM_ADDR, DM6_HP_ADDR, MENU_FN_PTR, MENU_FN_START_VAL, SHARD_FLAG_ADDR, SPRAY_FLAG_ADDR, SWITCH_STATE_ARR_ADDR};
 asr::async_main!(stable);
 asr::panic_handler!();
 
@@ -49,16 +49,17 @@ async fn main() {
                     
                     if timer_state == TimerState::Running {
                         if previous_timer_state == TimerState::NotRunning {
-                            vars.has_golem_split = false;  
-                            print_message("start");
                             start(&mut state, &mut vars, &settings);
-
                         }
                         if split(&mut state, &mut vars, &settings){
                             timer::split();
                         }
                     }
-                    
+                    else if timer_state == TimerState::NotRunning {
+                        if start(&mut state, &mut vars, &settings){
+                            timer::start();
+                        }
+                    }
                     previous_timer_state = timer_state;
                     next_tick().await;
                 }
@@ -69,7 +70,7 @@ async fn main() {
 
 
 
-pub fn start( state: &mut GameState, vars: &mut CustomVars, settings: &Settings) {
+pub fn start( state: &mut GameState, vars: &mut CustomVars, settings: &Settings) -> bool {
     vars.has_golem_split = false;
     vars.shard_split_mask = core::array::from_fn(|_| false);
     vars.spray_split_mask = core::array::from_fn(|_| false);
@@ -106,6 +107,14 @@ pub fn start( state: &mut GameState, vars: &mut CustomVars, settings: &Settings)
     set_switch_mask_if_setting!(mustard_mountain_switch, 12);
     set_switch_mask_if_setting!(candy_constellation_switch, 13);
     set_switch_mask_if_setting!(deep_mustard_mountain_switch, 14);
+
+    if settings.automatically_start {
+        let menu_pair = state.menu_val.pair.unwrap_or_default();
+        if menu_pair.changed_to(&MENU_FN_START_VAL) {
+            return true;
+        }
+    }
+    false
 }
 
 pub fn startup() -> CustomVars {
@@ -141,12 +150,13 @@ fn update_loop(game: &Emulator, state: &mut GameState, settings: &Settings){
     let dm6_hp = game.read::<u8>(DM6_HP_ADDR).unwrap_or_default();
     let spray_bytes = game.read::<[u8;2]>(SPRAY_FLAG_ADDR).unwrap_or_default();
     let switch_states = game.read::<[u32;15]>(SWITCH_STATE_ARR_ADDR).unwrap_or_default();
-
+    let start_fn_val = game.read::<u32>(MENU_FN_PTR).unwrap_or_default();
     state.room.update_infallible(curr_room);
     state.shards.update_infallible(curr_shards);
     state.dm6_hp.update_infallible(dm6_hp);
     state.sprays.update_infallible(spray_bytes);
     state.switches.update_infallible(switch_states);
+    state.menu_val.update_infallible(start_fn_val);
 }
 
 

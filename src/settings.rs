@@ -7,6 +7,12 @@ use asr::settings::gui::Title;
 
 #[derive(Gui)]
 pub struct Settings {
+    ///General
+    _general: Title,
+
+    #[default=false]
+    pub automatically_start: bool,
+
     /// Dark Meta Knight (Final)
     #[default = false]
     pub dark_mk: bool,
