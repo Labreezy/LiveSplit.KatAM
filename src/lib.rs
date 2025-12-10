@@ -25,7 +25,7 @@ pub struct CustomVars {
     dm4_loc: LocationPair,
     rr_warpstar_loc: LocationPair,
     
-    
+        
 }
 
 
@@ -107,10 +107,17 @@ pub fn start( state: &mut GameState, vars: &mut CustomVars, settings: &Settings)
     set_switch_mask_if_setting!(mustard_mountain_switch, 12);
     set_switch_mask_if_setting!(candy_constellation_switch, 13);
     set_switch_mask_if_setting!(deep_mustard_mountain_switch, 14);
-
+    
     if settings.automatically_start {
+        
         let menu_pair = state.menu_val.pair.unwrap_or_default();
-        if menu_pair.changed_to(&MENU_FN_START_VAL) {
+        if menu_pair.changed() {
+            print_limited::<100>(&format_args!("{:08X} -> {:08X}", menu_pair.old, menu_pair.current));
+        } else {
+            print_limited::<64>(&format_args!("{:08X} unchanged", menu_pair.current));
+        }
+        if menu_pair.changed_from(&0x813DB11) {
+            print_limited::<64>(&format_args!("New Value: 0x{:08X}",menu_pair.current));
             return true;
         }
     }
@@ -150,7 +157,8 @@ fn update_loop(game: &Emulator, state: &mut GameState, settings: &Settings){
     let dm6_hp = game.read::<u8>(DM6_HP_ADDR).unwrap_or_default();
     let spray_bytes = game.read::<[u8;2]>(SPRAY_FLAG_ADDR).unwrap_or_default();
     let switch_states = game.read::<[u32;15]>(SWITCH_STATE_ARR_ADDR).unwrap_or_default();
-    let start_fn_val = game.read::<u32>(MENU_FN_PTR).unwrap_or_default();
+    let start_fn_val = game.read::<u32>(MENU_FN_PTR).unwrap();
+    print_limited::<64>(&format_args!("FN VAL: {:08X}", start_fn_val));
     state.room.update_infallible(curr_room);
     state.shards.update_infallible(curr_shards);
     state.dm6_hp.update_infallible(dm6_hp);
@@ -170,7 +178,7 @@ fn split(state: &mut GameState, vars: &mut CustomVars, settings: &Settings) -> b
     let switch_pair = state.switches.pair.unwrap_or_default();
     
     //Mirror Shard Collection
-    if shard_pair.increased() {
+    if settings.shard_split && shard_pair.increased() {
 
         let num_old_flags: usize = vars.shard_split_mask.iter().filter(|&b| *b).count();
         let num_current_flags = (0..8).filter(|i: &i32| shard_pair.current & (1 << i) > 0).count();
@@ -196,6 +204,15 @@ fn split(state: &mut GameState, vars: &mut CustomVars, settings: &Settings) -> b
     split_loc_pair!(dmk_final_loc);
     split_loc_pair!(dm4_loc);
     split_loc_pair!(rr_warpstar_loc);
+    
+    //L-Warp detection
+    if (settings.l_warp && room_pair.changed_to(&0x321)){
+        let old_room = room_pair.old;
+        //trust me, i'm a professional
+        if (old_room % 100 < 90 && old_room != 970 && old_room > 0) {
+            return true;
+        } 
+    }
 
     //Dark Mind 6 (Any% ending)
     if room_pair.current == 919 && settings.dm6_end && !vars.dm6_has_split {

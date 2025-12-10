@@ -17,6 +17,7 @@ The auto splitter can now be compiled:
 cargo b --release
 ```
 
+
 The auto splitter is then available at:
 ```
 target/wasm32-unknown-unknown/release/kat_am_asr.wasm

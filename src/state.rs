@@ -23,10 +23,9 @@ pub const SWITCH_STATE_ARR_ADDR : u32 = 0x2028C14;
 
 pub const MENU_FN_PTR : u32 = 0x30043F0;
 
-pub const MENU_FN_START_VAL : u32 = 0x8142329;
+pub const MENU_FN_START_VAL : u32 = 0x814238D;
 
 pub static SPRAY_NAMES : [&str; 14] = [&"Pink",&"Yellow",&"Red",&"Green",&"Snow",&"Carbon",&"Ocean",&"Sapphire",&"Grape",&"Emerald",&"Orange",&"Chocolate",&"Cherry",&"Chalk"];
-
 
 #[derive(Default)]
 pub struct GameState {

@@ -1,6 +1,5 @@
 
 use core::default;
-
 use asr::settings::Gui;
 use asr::settings::gui::Title;
 
@@ -12,7 +11,9 @@ pub struct Settings {
 
     #[default=false]
     pub automatically_start: bool,
-
+    ///Split On Mirror Shard
+    #[default=true]
+    pub shard_split: bool,
     /// Dark Meta Knight (Final)
     #[default = false]
     pub dark_mk: bool,
@@ -23,6 +24,9 @@ pub struct Settings {
     #[default = true]
     pub dm6_end: bool,
 
+    #[default = false]
+    ///Split On Warp back to Central Circle
+    pub l_warp: bool,
     ///Warp Stars
     _warpstars: Title,
 
